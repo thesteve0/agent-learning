@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:towardsdatascience.com)",
+      "Bash(mv /workspaces/agent-learning/course/modules/module5-fastapi-integration.md /workspaces/agent-learning/course/modules/module6-fastapi-integration.md)",
+      "Bash(mv /workspaces/agent-learning/course/modules/module6-conference-demos.md /workspaces/agent-learning/course/modules/module7-conference-demos.md)",
+      "Bash(mv /workspaces/agent-learning/course/examples/module5_fastapi_integration.py /workspaces/agent-learning/course/examples/module6_fastapi_integration.py)",
+      "Bash(mv /workspaces/agent-learning/course/examples/module6_conference_demo.py /workspaces/agent-learning/course/examples/module7_conference_demo.py)"
+    ]
+  }
+}
