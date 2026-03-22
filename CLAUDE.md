@@ -13,6 +13,10 @@ This file provides context to Claude Code when working on this project.
 - [Add your frameworks: [transformers, 	]
 - [Add your tools: MLflow, FastAPI, SmolAgents SMolVLM, OpenAI API,Qwen2.5-VL, vLLM]
 
+## Git
+
+- Default branch is `main` (renamed from `master`)
+
 ## Codebase Structure
 
 ```

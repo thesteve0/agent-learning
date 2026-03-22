@@ -1,102 +1,103 @@
-# [Project Name]
+# agent-learning: VLM Agent/Tool-Calling Course
 
-> Replace this with a one-sentence description of what this project does and why it exists.
+> A self-contained curriculum for building production-ready VLM agent systems using Smolagents, vLLM, FastAPI, and MLflow. The concrete example is Stardew Vision — an accessibility tool that reads Stardew Valley UI screenshots — but the patterns transfer to any domain.
 
 ## Problem Statement
 
-Describe the problem this project solves. What question are you trying to answer? What business need does this address?
+Most developers jumping into agentic AI skip straight to multi-agent frameworks before understanding the fundamentals. This course teaches agent/tool-calling patterns from the ground up: starting with raw manual dispatch, then adding frameworks only where complexity justifies them. A key theme throughout is compound reliability — unstructured multi-agent systems can amplify errors up to 17x, so you learn to measure before you add complexity.
 
-## Dataset
+## What This Course Builds
 
-- **Data Source**: Where does the data come from? (e.g., public dataset, company database, web scraping)
-- **Size**: How much data? (e.g., "10GB of images", "1M text samples")
-- **Location**: Where is the data stored? (`./datasets/`, `/data/external-source`, etc.)
+The Stardew Vision application: a VLM-powered agent that accepts Stardew Valley screenshots and extracts structured data (item names, prices, quantities) from UI panels. Built progressively across 7 modules from raw Python to a production FastAPI service.
 
-If using external data mounted at `/data`, explain how to access it.
-
-## Methodology
-
-Describe your approach:
-- What models or algorithms are you using?
-- What preprocessing steps are required?
-- What are the key experiments or analyses?
-
-## Project Structure
+## Course Structure
 
 ```
-project-name/
-├── src/              # Source code for models, data processing, utilities
-├── configs/          # Configuration files (hyperparameters, paths, etc.)
-├── datasets/         # Training and evaluation data
-├── models/           # Trained model checkpoints
-├── notebooks/        # Jupyter notebooks for exploration and visualization
-├── tests/            # Unit and integration tests
-└── .cache/           # HuggingFace and PyTorch caches
+agent-learning/
+├── course/
+│   ├── curriculum.md                  # Full 7-module learning path
+│   ├── GETTING_STARTED.md             # Session-by-session guide
+│   ├── modules/                       # Detailed guides with diagrams
+│   │   ├── module1-manual-dispatch.md
+│   │   ├── module2-smolagents-basics.md
+│   │   ├── module3-vllm-integration.md
+│   │   ├── module4-production-wrapper.md
+│   │   ├── module5-evaluation.md
+│   │   ├── module6-fastapi-integration.md
+│   │   └── module7-conference-demos.md
+│   ├── examples/                      # Runnable code for each module
+│   ├── exercises/                     # Hands-on challenges
+│   ├── diagrams/                      # ASCII architecture diagrams
+│   ├── docs/                          # Quickstart, best practices, framework decisions
+│   └── resources/                     # Cheatsheets, sources, The Multi-Agent Trap PDF
+└── src/                               # Your working code goes here
 ```
+
+## Modules
+
+| # | Topic | Key Skill | Time |
+|---|-------|-----------|------|
+| 1 | Manual Tool Dispatch | OpenAI function-calling format, no framework | 1-2 hr |
+| 2 | Smolagents Basics | `Tool` class, `CodeAgent` vs `ToolCallingAgent` | 2-3 hr |
+| 3 | Smolagents + vLLM | `LiteLLMModel`, local GPU serving | 2-3 hr |
+| 4 | Production Wrapper | `VLMOrchestrator`, error handling, MLflow, unit tests | 2-3 hr |
+| 5 | Evaluation | Compound reliability, step/field/e2e accuracy, MLflow baselines | 1.5-2 hr |
+| 6 | FastAPI Integration | Web endpoints, file uploads, async patterns | 1-2 hr |
+| 7 | Advanced & Alternatives | LangGraph/CrewAI decision framework, conference demos | 1-2 hr |
+
+**Total**: 8-12 hours across 3-4 sessions
+
+## Key Technologies
+
+- **Smolagents** (HuggingFace) — primary agent framework
+- **Qwen2.5-VL-7B-Instruct** — vision language model
+- **vLLM** — local GPU serving with OpenAI-compatible API
+- **FastAPI** — web API layer
+- **MLflow** — experiment tracking and observability
+- **PyTorch** with ROCm acceleration (devcontainer)
 
 ## Setup
 
-This project runs in a ROCm devcontainer. Prerequisites and setup are already complete if you're reading this inside the container.
+This project runs in a ROCm devcontainer. Prerequisites are already configured if you're inside the container.
 
-**First-time setup** (if not already done):
-1. Clone this repository
-2. Open in VSCode and reopen in container (or use JetBrains Gateway)
-3. Wait for container build and environment setup to complete
-
-**Install project dependencies**:
+**Install dependencies**:
 ```bash
-# Add your dependencies to pyproject.toml dependencies section
-# Then run:
 uv sync
+uv add 'smolagents[toolkit,litellm]'
 ```
 
-## Usage
-
-### Training
+**Start vLLM server** (required for modules 3+):
 ```bash
-# Replace with your actual training command
-python src/train.py --config configs/training.yaml
+vllm serve models/base/Qwen2.5-VL-7B-Instruct \
+  --port 8001 --dtype float16 --enable-tool-calling
 ```
 
-### Inference
+**Verify**:
 ```bash
-# Replace with your actual inference command
-python src/inference.py --model models/best-model.pth --input data/sample.jpg
+curl http://localhost:8001/v1/models
+python -c "import smolagents; print(smolagents.__version__)"
 ```
 
-### Jupyter Notebooks
+## Where to Start
+
+Read `1-START-HERE-IN-THE-MORNING.md`, then follow `course/GETTING_STARTED.md`.
+
+Work through modules **sequentially** — Module 1 exists so the later abstractions make sense.
+
+## Core Principle
+
+> "Start simple, measure everything, add complexity only when the measurement justifies it."
+
+See `course/resources/TheMulti-Agent Trap _ TowardsDataScience.pdf` for the research behind this.
+
+## Linting
+
 ```bash
-# Launch Jupyter (if configured)
-jupyter lab
+ruff check src/
+ruff format src/
+ruff check --fix src/
 ```
-
-## Results
-
-Document your findings here:
-- Model performance metrics (accuracy, F1, loss curves, etc.)
-- Key insights from data analysis
-- Visualizations and plots (consider adding to `results/` directory)
-- Links to experiment tracking (MLflow, W&B, etc.)
-
-## Known Issues
-
-List any known limitations, bugs, or areas for improvement.
-
-## Contributing
-
-If this is a team project, describe:
-- How to submit changes (PR process, code review requirements)
-- Coding standards (linting, formatting, testing requirements)
-- Branch naming conventions
-
-## License
-
-Specify your license or "Proprietary" if not open source.
-
-## Acknowledgments
-
-Credit data sources, pre-trained models, papers, or team members.
 
 ---
 
-**Template Info**: This project was created from [datascience-template-ROCm](https://github.com/thesteve0/datascience-template-ROCm). For ROCm setup, troubleshooting, or template infrastructure details, see `template_docs/`.
+This project was created from [datascience-template-ROCm](https://github.com/thesteve0/datascience-template-ROCm). For ROCm setup and troubleshooting, see `template_docs/`.
