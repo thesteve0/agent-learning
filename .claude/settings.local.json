@@ -7,7 +7,8 @@
       "Bash(mv /workspaces/agent-learning/course/examples/module5_fastapi_integration.py /workspaces/agent-learning/course/examples/module6_fastapi_integration.py)",
       "Bash(mv /workspaces/agent-learning/course/examples/module6_conference_demo.py /workspaces/agent-learning/course/examples/module7_conference_demo.py)",
       "WebSearch",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(python3:*)"
     ]
   }
 }

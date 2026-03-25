@@ -1,17 +1,19 @@
 """
 Module 2: Smolagents Basics
 
-Purpose: Learn Smolagents framework - Tool class, CodeAgent, and InferenceClientModel.
+Purpose: Learn Smolagents framework - Tool class, CodeAgent, and TransformersModel.
 This is your first introduction to the framework that will power the VLM orchestrator.
 
 Prerequisites:
 - Completed Module 1 (understand manual dispatch)
-- Smolagents installed: uv add 'smolagents[toolkit]'
+- Smolagents installed with extras:
+  - uv add 'smolagents[toolkit]'
+  - uv add 'smolagents[transformers]'  # Required for TransformersModel
 
 What you'll learn:
 - How to create custom Tool classes
 - How CodeAgent works (writes Python code to call tools)
-- How to use InferenceClientModel (transformers backend)
+- How to use TransformersModel (local transformers backend)
 - Difference between CodeAgent and ToolCallingAgent
 """
 
@@ -28,7 +30,6 @@ def check_smolagents_installed():
     try:
         import smolagents
         print(f"✅ Smolagents installed (version {smolagents.__version__})")
-        return True
     except ImportError:
         print("❌ Smolagents not installed!")
         print()
@@ -36,6 +37,17 @@ def check_smolagents_installed():
         print("  uv add 'smolagents[toolkit]'")
         print()
         return False
+
+    # Check for transformers extra (needed for Example 2)
+    try:
+        from smolagents import TransformersModel
+        print("✅ Transformers extra available")
+    except ImportError:
+        print("⚠️  Transformers extra not installed (needed for Example 2)")
+        print("   Install with: uv add 'smolagents[transformers]'")
+        print()
+
+    return True
 
 
 def example_1_basic_tool():
@@ -118,10 +130,13 @@ def example_1_basic_tool():
 
 
 def example_2_codeagent_local():
-    """Example 2: Use CodeAgent with InferenceClientModel (local transformers)."""
+    """Example 2: Use CodeAgent with TransformersModel (local transformers)."""
     print("=" * 80)
-    print("EXAMPLE 2: CodeAgent with InferenceClientModel")
+    print("EXAMPLE 2: CodeAgent with TransformersModel")
     print("=" * 80)
+    print()
+    print("Prerequisites:")
+    print("  - uv add 'smolagents[transformers]'")
     print()
     print("⚠️  WARNING: This example downloads Qwen2.5-VL-7B-Instruct (~15GB)")
     print("⚠️  and runs inference on CPU/GPU. May take several minutes.")
@@ -133,7 +148,20 @@ def example_2_codeagent_local():
         print("Skipped. Move to Module 3 for vLLM-based version (recommended).")
         return
 
-    from smolagents import CodeAgent, InferenceClientModel, Tool
+    from smolagents import CodeAgent, Tool
+    from smolagents.monitoring import LogLevel
+
+    # Check for TransformersModel
+    try:
+        from smolagents import TransformersModel
+    except ImportError:
+        print("❌ TransformersModel not available!")
+        print()
+        print("Install with:")
+        print("  uv add 'smolagents[transformers]'")
+        print()
+        print("This installs the required transformers library.")
+        return
 
     class CropPierresPanelTool(Tool):
         name = "crop_pierres_detail_panel"
@@ -150,21 +178,28 @@ def example_2_codeagent_local():
 
     print("Loading model (this may take a while)...")
     print("Model: Qwen/Qwen2.5-VL-7B-Instruct")
+    print("This will download the model from HuggingFace and load it locally.")
     print()
 
     try:
-        model = InferenceClientModel(
-            model_id="Qwen/Qwen2.5-VL-7B-Instruct"
+        model = TransformersModel(
+            model_id="Qwen/Qwen2.5-VL-7B-Instruct",
+            device_map="auto",  # Automatically use GPU if available
+            trust_remote_code=True  # Required for some VLM models
         )
         print("✅ Model loaded!")
         print()
     except Exception as e:
         print(f"❌ Failed to load model: {e}")
         print()
-        print("This is expected if:")
-        print("  - Model not downloaded")
-        print("  - Insufficient memory")
-        print("  - GPU not available")
+        if "transformers" in str(e).lower():
+            print("Missing transformers extra! Install with:")
+            print("  uv add 'smolagents[transformers]'")
+        else:
+            print("This is expected if:")
+            print("  - Model not downloaded (will auto-download on first run)")
+            print("  - Insufficient memory (VLM models are large)")
+            print("  - GPU not available (will use CPU, but very slow)")
         print()
         print("Recommended: Skip to Module 3 to use vLLM instead")
         return
@@ -178,7 +213,7 @@ def example_2_codeagent_local():
         model=model,
         add_base_tools=False,  # Don't add default DuckDuckGo, etc.
         max_steps=3,           # Limit reasoning iterations
-        verbosity=2            # 0=silent, 1=normal, 2=verbose
+        verbosity_level=LogLevel.DEBUG  # OFF, ERROR, INFO, DEBUG
     )
     print("✅ Agent created!")
     print()
@@ -265,7 +300,7 @@ def main():
     print("Learning objectives:")
     print("  1. Create custom Tool classes")
     print("  2. Understand CodeAgent paradigm")
-    print("  3. Use InferenceClientModel (transformers backend)")
+    print("  3. Use TransformersModel (local transformers backend)")
     print("  4. Compare CodeAgent vs ToolCallingAgent")
     print()
 
@@ -299,14 +334,14 @@ def main():
     print("You now understand:")
     print("  ✅ How to create Smolagents Tool classes")
     print("  ✅ How CodeAgent works (writes Python code)")
-    print("  ✅ How InferenceClientModel works (transformers backend)")
+    print("  ✅ How TransformersModel works (local transformers backend)")
     print("  ✅ Difference between CodeAgent and ToolCallingAgent")
     print()
     print("Key insights:")
     print("  - Tool class wraps function + metadata")
     print("  - CodeAgent writes Python code (not JSON)")
-    print("  - InferenceClientModel downloads model from HF Hub")
-    print("  - Verbosity=2 shows you what agent is thinking")
+    print("  - TransformersModel downloads model from HF Hub and runs locally")
+    print("  - verbosity_level=LogLevel.DEBUG shows you what agent is thinking")
     print()
     print("Next: Module 3 - Connect to vLLM for production serving")
     print()
