@@ -6,7 +6,7 @@ This is your first introduction to the framework that will power the VLM orchest
 
 Prerequisites:
 - Completed Module 1 (understand manual dispatch)
-- Smolagents installed: uv add 'smolagents[toolkit,litellm]'
+- Smolagents installed: uv add 'smolagents[toolkit]'
 
 What you'll learn:
 - How to create custom Tool classes
@@ -33,7 +33,7 @@ def check_smolagents_installed():
         print("❌ Smolagents not installed!")
         print()
         print("Install with:")
-        print("  uv add 'smolagents[toolkit,litellm]'")
+        print("  uv add 'smolagents[toolkit]'")
         print()
         return False
 
@@ -68,7 +68,7 @@ def example_1_basic_tool():
             }
         }
 
-        output_type = "dict"
+        output_type = "object"
 
         def forward(self, image_path: str):
             """Execute the extraction tool."""
@@ -139,7 +139,7 @@ def example_2_codeagent_local():
         name = "crop_pierres_detail_panel"
         description = "Extract item details from Pierre's General Store detail panel in screenshot"
         inputs = {"image_path": {"type": "string", "description": "Path to screenshot"}}
-        output_type = "dict"
+        output_type = "object"
 
         def forward(self, image_path: str):
             try:

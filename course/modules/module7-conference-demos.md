@@ -154,9 +154,9 @@ result = TOOL_REGISTRY[tool_call.function.name](**json.loads(tool_call.function.
 
 **Code example** (from Modules 2-5):
 ```python
-from smolagents import CodeAgent, LiteLLMModel
+from smolagents import CodeAgent, OpenAIServerModel
 
-model = LiteLLMModel(base_url="http://localhost:8001/v1", api_key="EMPTY")
+model = OpenAIServerModel(base_url="http://localhost:8001/v1", api_key="EMPTY")
 agent = CodeAgent(tools=[Tool1(), Tool2(), Tool3()], model=model)
 
 result = agent.run("Classify and extract from screenshot")
@@ -265,7 +265,7 @@ Return validated result
 
 **Code example** (Smolagents multi-agent):
 ```python
-from smolagents import CodeAgent, LiteLLMModel
+from smolagents import CodeAgent, OpenAIServerModel
 
 # Extractor agent
 extractor = CodeAgent(
@@ -389,10 +389,10 @@ def demo_2_smolagents():
     print("  - VLM-optimized (vision, video, audio)")
     print()
 
-    from smolagents import CodeAgent, LiteLLMModel
+    from smolagents import CodeAgent, OpenAIServerModel
     from stardew_vision.models.vlm_wrapper import PierresPanelTool
 
-    model = LiteLLMModel(
+    model = OpenAIServerModel(
         model_id="Qwen2.5-VL-7B-Instruct",
         base_url="http://localhost:8001/v1",
         api_key="EMPTY"
@@ -502,7 +502,7 @@ class PierresPanelTool(Tool):
     inputs = {
         "image_path": {"type": "string", "description": "Path to screenshot"}
     }
-    output_type = "dict"
+    output_type = "object"
 
     def forward(self, image_path: str):
         from stardew_vision.tools import crop_pierres_detail_panel

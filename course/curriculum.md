@@ -260,7 +260,7 @@ class CropPierresPanelTool(Tool):
         }
     }
 
-    output_type = "dict"
+    output_type = "object"
 
     def forward(self, image_path: str):
         """Execute the extraction tool."""
@@ -392,7 +392,7 @@ Experiment with CodeAgent parameters:
 ### Learning Objectives
 
 - Start vLLM server with tool calling enabled
-- Use LiteLLMModel backend for vLLM
+- Use OpenAIServerModel backend for vLLM
 - Configure endpoint and API key
 - Debug connection issues
 
@@ -423,7 +423,7 @@ curl http://localhost:8001/v1/models
 
 **Tasks**:
 1. Start vLLM server (separate terminal)
-2. Configure LiteLLMModel to use vLLM endpoint
+2. Configure OpenAIServerModel to use vLLM endpoint
 3. Run CodeAgent with vLLM backend
 4. Compare performance with transformers
 
@@ -432,9 +432,9 @@ curl http://localhost:8001/v1/models
 ```python
 """
 Module 3: Smolagents + vLLM integration.
-Purpose: Use vLLM endpoint with LiteLLMModel backend.
+Purpose: Use vLLM endpoint with OpenAIServerModel backend.
 """
-from smolagents import CodeAgent, Tool, LiteLLMModel
+from smolagents import CodeAgent, Tool, OpenAIServerModel
 import json
 
 class CropPierresPanelTool(Tool):
@@ -447,7 +447,7 @@ class CropPierresPanelTool(Tool):
             "description": "Path to the screenshot file"
         }
     }
-    output_type = "dict"
+    output_type = "object"
 
     def forward(self, image_path: str):
         from stardew_vision.tools import crop_pierres_detail_panel
@@ -463,9 +463,9 @@ def run_smolagents_vllm():
     print("=" * 80)
     print()
 
-    # Configure LiteLLMModel for vLLM endpoint
+    # Configure OpenAIServerModel for vLLM endpoint
     print("Connecting to vLLM endpoint at http://localhost:8001...")
-    model = LiteLLMModel(
+    model = OpenAIServerModel(
         model_id="Qwen2.5-VL-7B-Instruct",  # Model name for vLLM
         base_url="http://localhost:8001/v1",  # vLLM OpenAI-compatible endpoint
         api_key="EMPTY"  # vLLM doesn't require auth for local
@@ -507,7 +507,7 @@ def run_smolagents_vllm():
     print("✅ Module 3 Complete!")
     print("You now understand:")
     print("  - How to connect Smolagents to vLLM endpoint")
-    print("  - How LiteLLMModel works (OpenAI-compatible wrapper)")
+    print("  - How OpenAIServerModel works (OpenAI-compatible wrapper)")
     print("  - Same agent code, different backend")
     print("  - This pattern works for OpenShift AI too!")
 
@@ -575,7 +575,7 @@ Expected output:
 
 ### Key Takeaways
 
-1. **LiteLLMModel is universal** - Works with vLLM, OpenAI, Anthropic, etc.
+1. **OpenAIServerModel is universal** - Works with vLLM, OpenAI, Anthropic, etc.
 2. **Same agent code** - Only model initialization changes
 3. **vLLM is production-ready** - Use for serving
 4. **OpenAI-compatible API** - Standard pattern
@@ -625,7 +625,7 @@ import json
 import logging
 from typing import Optional, Dict, Any
 from pathlib import Path
-from smolagents import CodeAgent, Tool, LiteLLMModel
+from smolagents import CodeAgent, Tool, OpenAIServerModel
 import mlflow
 
 logger = logging.getLogger(__name__)
@@ -640,7 +640,7 @@ class PierresPanelTool(Tool):
             "description": "Path to the screenshot file"
         }
     }
-    output_type = "dict"
+    output_type = "object"
 
     def forward(self, image_path: str):
         """Execute the extraction tool."""
@@ -683,7 +683,7 @@ class VLMOrchestrator:
         # Initialize model
         if use_vllm:
             logger.info(f"Using vLLM endpoint: {vllm_endpoint}")
-            self.model = LiteLLMModel(
+            self.model = OpenAIServerModel(
                 model_id=model_id,
                 base_url=vllm_endpoint,
                 api_key="EMPTY"
@@ -779,7 +779,7 @@ from stardew_vision.models.vlm_wrapper import VLMOrchestrator
 @pytest.fixture
 def orchestrator():
     """Create VLMOrchestrator with mocked components."""
-    with patch('stardew_vision.models.vlm_wrapper.LiteLLMModel'):
+    with patch('stardew_vision.models.vlm_wrapper.OpenAIServerModel'):
         orch = VLMOrchestrator(enable_mlflow=False)
         return orch
 
@@ -1209,10 +1209,10 @@ def demo_2_smolagents():
     print("  - VLM-optimized (vision, video, audio)")
     print()
 
-    from smolagents import CodeAgent, LiteLLMModel
+    from smolagents import CodeAgent, OpenAIServerModel
     from stardew_vision.models.vlm_wrapper import PierresPanelTool
 
-    model = LiteLLMModel(
+    model = OpenAIServerModel(
         model_id="Qwen2.5-VL-7B-Instruct",
         base_url="http://localhost:8001/v1",
         api_key="EMPTY"
@@ -1362,7 +1362,7 @@ You've completed the agent/tool-calling curriculum! You now have:
 
 **Production Deployment**
 - OpenShift AI KServe for vLLM
-- Same LiteLLMModel code, different endpoint
+- Same OpenAIServerModel code, different endpoint
 - MLFlow tracking in production
 
 **Conference Talks**

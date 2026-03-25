@@ -1,7 +1,7 @@
 """
 Module 3: Smolagents + vLLM Integration
 
-Purpose: Connect Smolagents to vLLM endpoint using LiteLLMModel.
+Purpose: Connect Smolagents to vLLM endpoint using OpenAIServerModel.
 This is the production pattern - same code works for local vLLM and OpenShift AI.
 
 Prerequisites:
@@ -17,10 +17,15 @@ vLLM Startup Command:
     --max-model-len 4096
 
 What you'll learn:
-- How to use LiteLLMModel for vLLM endpoints
+- How to use OpenAIServerModel for vLLM endpoints
 - How to configure endpoint URL and API key
 - Same agent code, different backend (vs Module 2)
 - Debug connection issues
+
+Security Note:
+- This module previously used OpenAIServerModel
+- Switched to OpenAIServerModel due to March 2026 LiteLLM supply chain attack
+- OpenAIServerModel provides identical functionality without the compromised dependency
 """
 
 import json
@@ -71,16 +76,16 @@ def check_vllm_server(endpoint: str = "http://localhost:8001") -> bool:
         return False
 
 
-def example_1_litellm_model():
-    """Example 1: Configure LiteLLMModel for vLLM endpoint."""
-    from smolagents import LiteLLMModel
+def example_1_openai_server_model():
+    """Example 1: Configure OpenAIServerModel for vLLM endpoint."""
+    from smolagents import OpenAIServerModel
 
     print("=" * 80)
-    print("EXAMPLE 1: LiteLLMModel Configuration")
+    print("EXAMPLE 1: OpenAIServerModel Configuration")
     print("=" * 80)
     print()
 
-    print("LiteLLMModel is a universal backend that works with:")
+    print("OpenAIServerModel is a universal backend that works with:")
     print("  - vLLM (local or remote)")
     print("  - OpenAI API")
     print("  - Anthropic API")
@@ -92,9 +97,9 @@ def example_1_litellm_model():
 
     # Show configuration
     config_code = """
-    from smolagents import LiteLLMModel
+    from smolagents import OpenAIServerModel
 
-    model = LiteLLMModel(
+    model = OpenAIServerModel(
         model_id="Qwen2.5-VL-7B-Instruct",  # Model name for vLLM
         base_url="http://localhost:8001/v1",  # vLLM OpenAI-compatible endpoint
         api_key="EMPTY"  # vLLM doesn't require auth for local
@@ -104,7 +109,7 @@ def example_1_litellm_model():
 
     print("Creating model...")
     try:
-        model = LiteLLMModel(
+        model = OpenAIServerModel(
             model_id="Qwen2.5-VL-7B-Instruct",
             base_url="http://localhost:8001/v1",
             api_key="EMPTY"
@@ -124,7 +129,7 @@ def example_1_litellm_model():
 
 def example_2_codeagent_vllm():
     """Example 2: Use CodeAgent with vLLM backend."""
-    from smolagents import CodeAgent, LiteLLMModel, Tool
+    from smolagents import CodeAgent, OpenAIServerModel, Tool
 
     print("=" * 80)
     print("EXAMPLE 2: CodeAgent + vLLM")
@@ -144,7 +149,7 @@ def example_2_codeagent_vllm():
             }
         }
 
-        output_type = "dict"
+        output_type = "object"
 
         def forward(self, image_path: str):
             """Execute the extraction tool."""
@@ -168,7 +173,7 @@ def example_2_codeagent_vllm():
 
     # Configure model
     print("Connecting to vLLM endpoint...")
-    model = LiteLLMModel(
+    model = OpenAIServerModel(
         model_id="Qwen2.5-VL-7B-Instruct",
         base_url="http://localhost:8001/v1",
         api_key="EMPTY"
@@ -239,13 +244,13 @@ def example_3_production_pattern():
     print("=" * 80)
     print()
 
-    print("The power of LiteLLMModel: Same agent code works everywhere!")
+    print("The power of OpenAIServerModel: Same agent code works everywhere!")
     print()
 
     # Show different configurations
     configs = {
         "Local vLLM": """
-        model = LiteLLMModel(
+        model = OpenAIServerModel(
             model_id="Qwen2.5-VL-7B-Instruct",
             base_url="http://localhost:8001/v1",
             api_key="EMPTY"
@@ -253,7 +258,7 @@ def example_3_production_pattern():
         """,
 
         "OpenShift AI KServe": """
-        model = LiteLLMModel(
+        model = OpenAIServerModel(
             model_id="Qwen2.5-VL-7B-Instruct",
             base_url="https://qwen-vlm.apps.openshift.example.com/v1",
             api_key=os.environ["KSERVE_API_KEY"]
@@ -261,14 +266,14 @@ def example_3_production_pattern():
         """,
 
         "OpenAI API": """
-        model = LiteLLMModel(
+        model = OpenAIServerModel(
             model_id="gpt-4o",
             api_key=os.environ["OPENAI_API_KEY"]
         )
         """,
 
         "Anthropic API": """
-        model = LiteLLMModel(
+        model = OpenAIServerModel(
             model_id="claude-sonnet-4",
             api_key=os.environ["ANTHROPIC_API_KEY"]
         )
@@ -348,7 +353,7 @@ def main():
     print("=" * 80)
     print()
     print("Learning objectives:")
-    print("  1. Configure LiteLLMModel for vLLM endpoint")
+    print("  1. Configure OpenAIServerModel for vLLM endpoint")
     print("  2. Use CodeAgent with vLLM backend")
     print("  3. Understand production deployment pattern")
     print("  4. Debug connection issues")
@@ -365,8 +370,8 @@ def main():
             return
         print()
 
-    # Example 1: LiteLLMModel configuration
-    model = example_1_litellm_model()
+    # Example 1: OpenAIServerModel configuration
+    model = example_1_openai_server_model()
     if not model:
         print("Skipping remaining examples (model configuration failed)")
         return
@@ -399,12 +404,12 @@ def main():
     print()
     print("You now understand:")
     print("  ✅ How to connect Smolagents to vLLM endpoint")
-    print("  ✅ How LiteLLMModel works (OpenAI-compatible wrapper)")
+    print("  ✅ How OpenAIServerModel works (OpenAI-compatible wrapper)")
     print("  ✅ Same agent code, different backend (local vs remote)")
     print("  ✅ How to debug vLLM connection issues")
     print()
     print("Key insights:")
-    print("  - LiteLLMModel is universal (vLLM, OpenAI, Anthropic)")
+    print("  - OpenAIServerModel is universal (vLLM, OpenAI, Anthropic)")
     print("  - Same CodeAgent code works everywhere")
     print("  - vLLM uses OpenAI-compatible API")
     print("  - This pattern works for OpenShift AI too")

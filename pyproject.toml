@@ -8,6 +8,7 @@ dependencies = [
     "tomli-w>=1.0.0",
     "ruff>=0.4.0",
     "pdfminer-six>=20260107",
+    "smolagents[toolkit]>=1.24.0",
 ]
 
 [tool.uv]
@@ -34,13 +35,11 @@ exclude-dependencies = [
     "pillow",
     "pip",
     "pluggy",
-    "pre-commit",
     "pygments",
     "pyparsing",
     "pytest",
     "python-dateutil",
     "pyyaml",
-    "ruff",
     "scipy",
     "setuptools",
     "six",

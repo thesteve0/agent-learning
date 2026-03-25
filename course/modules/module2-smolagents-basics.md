@@ -95,10 +95,11 @@ Works with:
 **Same code, different backend**:
 ```python
 # Local vLLM
-model = LiteLLMModel(model_id="Qwen2.5-VL", base_url="http://localhost:8001/v1")
+from smolagents import OpenAIServerModel
+model = OpenAIServerModel(model_id="Qwen2.5-VL", base_url="http://localhost:8001/v1", api_key="EMPTY")
 
 # OpenAI
-model = LiteLLMModel(model_id="gpt-4o", api_key=os.getenv("OPENAI_API_KEY"))
+model = OpenAIServerModel(model_id="gpt-4o", api_key=os.getenv("OPENAI_API_KEY"))
 
 # Same agent code works with both!
 agent = CodeAgent(tools=[...], model=model)
@@ -146,7 +147,7 @@ When something breaks, you can debug it. When you need custom behavior, you can 
 
 ```bash
 # Install with all backends
-uv add 'smolagents[toolkit,litellm]'
+uv add 'smolagents[toolkit]'
 
 # Verify installation
 python -c "import smolagents; print(smolagents.__version__)"
@@ -154,14 +155,15 @@ python -c "import smolagents; print(smolagents.__version__)"
 
 **Extras explained**:
 - `toolkit`: Includes default tools (web search, Python REPL, etc.)
-- `litellm`: LiteLLM backend for OpenAI-compatible endpoints (vLLM, TGI)
 
 **If you get import errors**:
 ```bash
 # Reinstall with correct extras
 uv remove smolagents
-uv add 'smolagents[toolkit,litellm]'
+uv add 'smolagents[toolkit]'
 ```
+
+**Note on LiteLLM**: Due to a recent supply chain attack (March 2026), we've removed LiteLLM from this course. Module 3 now uses `OpenAIServerModel` instead, which provides the same functionality for connecting to vLLM and other OpenAI-compatible endpoints without the compromised dependency.
 
 ---
 
@@ -186,7 +188,7 @@ class MyTool(Tool):
         "param1": {"type": "string", "description": "..."},
         "param2": {"type": "integer", "description": "..."}
     }
-    output_type = "dict"  # str, dict, Image, etc.
+    output_type = "object"  # str, dict, Image, etc.
 
     # IMPLEMENTATION (replaces function in registry)
     def forward(self, param1: str, param2: int):
@@ -218,25 +220,25 @@ Smolagents supports multiple model backends via a unified interface:
 from smolagents import InferenceClientModel
 model = InferenceClientModel(model_id="Qwen/Qwen2.5-VL-7B-Instruct")
 
-# LiteLLMModel: OpenAI-compatible endpoints (vLLM, TGI, OpenAI, etc.)
-from smolagents import LiteLLMModel
-model = LiteLLMModel(
+# OpenAIServerModel: OpenAI-compatible endpoints (vLLM, TGI, OpenAI, etc.)
+from smolagents import OpenAIServerModel
+model = OpenAIServerModel(
     model_id="Qwen2.5-VL-7B-Instruct",
     base_url="http://localhost:8001/v1",
     api_key="EMPTY"
 )
 
-# OpenAIServerModel: OpenAI SDK directly
-from smolagents import OpenAIServerModel
+# Or for actual OpenAI API
 model = OpenAIServerModel(model_id="gpt-4o", api_key="sk-...")
 ```
 
 **When to use which**:
 - `InferenceClientModel`: Quick testing, no vLLM setup needed (slower)
-- `LiteLLMModel`: Production, local vLLM or OpenShift AI (fast, recommended)
-- `OpenAIServerModel`: Using actual OpenAI API
+- `OpenAIServerModel`: Production use with vLLM, OpenShift AI, or OpenAI API (fast, recommended)
 
-**For this tutorial**: We start with `InferenceClientModel` (Module 2), then switch to `LiteLLMModel` with vLLM (Module 3).
+**For this tutorial**: We start with `InferenceClientModel` (Module 2), then switch to `OpenAIServerModel` with vLLM (Module 3).
+
+**Security Note**: We previously used `LiteLLMModel`, but removed it due to a March 2026 supply chain attack. `OpenAIServerModel` provides the same functionality without the compromised dependency.
 
 ### Concept 3: CodeAgent vs ToolCallingAgent
 
@@ -277,6 +279,303 @@ result = agent.run("Do something")
 **Cons**: Requires code execution sandbox
 
 **We use CodeAgent** for this project. See full comparison: [`diagrams/codeagent-execution.txt`](../diagrams/codeagent-execution.txt)
+
+---
+
+## How Smolagents Constructs Prompts
+
+Understanding **what the VLM actually sees** is crucial for debugging and writing good tools.
+
+### From Tool Class to System Prompt
+
+When you create a Tool class:
+```python
+class CropPierresPanelTool(Tool):
+    name = "crop_pierres_detail_panel"
+    description = "Extract item details from Pierre's General Store detail panel"
+    inputs = {
+        "image_path": {"type": "string", "description": "Path to screenshot"}
+    }
+    output_type = "object"
+
+    def forward(self, image_path: str):
+        # Implementation...
+```
+
+Smolagents **auto-generates** a tool signature for the VLM:
+```
+crop_pierres_detail_panel(image_path: str) -> object
+  Extract item details from Pierre's General Store detail panel
+
+  Parameters:
+    - image_path (str): Path to screenshot
+```
+
+### The Message Structure
+
+When you call `agent.run("Extract from screenshot.png")`, Smolagents sends a **chat message array** to the VLM:
+
+```python
+messages = [
+    {
+        "role": "system",
+        "content": """You are a Python coding assistant.
+
+Available tools:
+  - crop_pierres_detail_panel(image_path: str) -> object
+      Extract item details from Pierre's General Store detail panel
+
+      Parameters:
+        - image_path (str): Path to screenshot
+
+Write Python code to call these tools to complete the user's task.
+Output only executable Python code, no explanations."""
+    },
+    {
+        "role": "user",
+        "content": "Extract from screenshot.png"
+    }
+]
+```
+
+**Key insights**:
+- **System message**: Contains tool definitions + instructions
+- **User message**: Your natural language task
+- **Separation**: They're distinct messages, not concatenated
+- **Standard format**: This is OpenAI chat API format (works with vLLM, OpenAI, Anthropic, etc.)
+
+### What This Means for Tool Design
+
+Since tool metadata becomes the VLM's documentation, **be specific**:
+
+**Bad** (vague):
+```python
+description = "Processes images"
+inputs = {"path": {"type": "string", "description": "File"}}
+```
+
+**Good** (specific):
+```python
+description = "Extract item details from Pierre's General Store detail panel in a Stardew Valley screenshot"
+inputs = {
+    "image_path": {
+        "type": "string",
+        "description": "Absolute path to the screenshot file (PNG or JPG)"
+    }
+}
+```
+
+The VLM uses these descriptions to decide:
+1. **Which tool to call** (based on description matching user's task)
+2. **What arguments to pass** (based on parameter descriptions)
+
+### Multi-Step Conversations
+
+For complex tasks, the message array grows:
+
+**Step 1**:
+```python
+[
+    {"role": "system", "content": "...tool definitions..."},
+    {"role": "user", "content": "Extract from screenshot.png"}
+]
+# VLM generates: result = crop_pierres_detail_panel(...)
+```
+
+**Step 2** (if agent needs more reasoning):
+```python
+[
+    {"role": "system", "content": "...tool definitions..."},
+    {"role": "user", "content": "Extract from screenshot.png"},
+    {"role": "assistant", "content": "result = crop_pierres_detail_panel(...)"},
+    {"role": "user", "content": "Execution result: {'name': 'Parsnip', ...}"}
+]
+# VLM sees previous code + result, decides if task is complete
+```
+
+**The loop continues** until:
+- VLM calls `final_answer()` function
+- `max_steps` reached
+- Error occurs
+
+---
+
+## Understanding forward() Methods
+
+The `forward()` method is where your tool's logic lives. **Keep it simple**, but add logic when needed.
+
+### Pattern: Thin Wrapper (Recommended)
+
+```python
+class MyTool(Tool):
+    name = "my_tool"
+    # ... metadata ...
+
+    def forward(self, arg: str):
+        # Just call your real implementation
+        from my_module import my_actual_function
+        return my_actual_function(arg)
+```
+
+**Why thin?**
+- Separates tool interface (Smolagents) from implementation (your code)
+- Easier to test implementation independently
+- Can reuse implementation outside of agents
+
+### When to Add Logic in forward()
+
+#### 1. Error Handling (Most Common)
+```python
+def forward(self, image_path: str):
+    try:
+        from stardew_vision.tools import crop_pierres_detail_panel
+        return crop_pierres_detail_panel(image_path)
+    except FileNotFoundError:
+        return {"error": "Screenshot file not found"}
+    except Exception as e:
+        logger.error(f"Tool failed: {e}")
+        return {"error": str(e)}
+```
+
+**Why**: VLMs handle structured error messages better than raw exceptions.
+
+#### 2. Input Validation
+```python
+def forward(self, image_path: str):
+    if not Path(image_path).exists():
+        return {"error": f"File does not exist: {image_path}"}
+
+    if not image_path.endswith(('.png', '.jpg', '.jpeg')):
+        return {"error": "Only PNG/JPG images supported"}
+
+    from stardew_vision.tools import crop_pierres_detail_panel
+    return crop_pierres_detail_panel(image_path)
+```
+
+**Why**: Fail fast, avoid wasting GPU/API calls on invalid input.
+
+#### 3. Logging/Observability
+```python
+def forward(self, image_path: str):
+    import time
+    start = time.time()
+    logger.info(f"Processing {image_path}")
+
+    from stardew_vision.tools import crop_pierres_detail_panel
+    result = crop_pierres_detail_panel(image_path)
+
+    duration = time.time() - start
+    logger.info(f"Completed in {duration:.2f}s")
+    return result
+```
+
+**Why**: Track tool performance, debug issues in production.
+
+#### 4. Caching (Avoid Redundant Work)
+```python
+def __init__(self):
+    super().__init__()
+    self.cache = {}
+
+def forward(self, image_path: str):
+    if image_path in self.cache:
+        logger.info(f"Cache hit: {image_path}")
+        return self.cache[image_path]
+
+    from stardew_vision.tools import crop_pierres_detail_panel
+    result = crop_pierres_detail_panel(image_path)
+    self.cache[image_path] = result
+    return result
+```
+
+**Why**: OCR/vision operations are expensive—don't reprocess the same image.
+
+### Rule of Thumb
+
+If `forward()` is getting longer than ~20 lines, ask yourself: **"Should this logic be in my actual tool implementation instead?"**
+
+Usually yes. Keep `forward()` focused on:
+- ✅ Calling your implementation
+- ✅ Handling errors gracefully
+- ✅ Validating inputs
+- ✅ Logging/monitoring
+
+**Don't put in** `forward()`:
+- ❌ Core business logic (put that in your actual implementation)
+- ❌ Complex algorithms (separate into dedicated functions)
+
+---
+
+## CodeAgent Requirements
+
+**Important**: CodeAgent requires a **code-capable VLM**.
+
+### What CodeAgent Expects
+
+CodeAgent asks the VLM to generate **Python code**:
+```python
+# VLM must generate simple code like:
+image_path = "/path/to/screenshot.png"
+result = crop_pierres_detail_panel(image_path=image_path)
+print(result)
+```
+
+This is **not complex programming**—it's:
+- Variable assignment
+- Function calls with keyword arguments
+- Print statements
+
+The VLM doesn't write algorithms or classes, just **calls your tools using Python syntax**.
+
+### Which Models Work?
+
+**Good for CodeAgent** (code-trained VLMs):
+- ✅ Qwen2.5-VL-7B-Instruct (our choice)
+- ✅ GPT-4V / GPT-4o (OpenAI)
+- ✅ Claude Sonnet 4 (Anthropic)
+- ✅ Any model trained on code corpora
+
+**Challenging for CodeAgent**:
+- ❌ Small models (<3B params)
+- ❌ Vision-only models without code training
+- ❌ Models not fine-tuned for instruction following
+
+### Why It Works Well
+
+1. **Modern VLMs are trained on code**
+   - Qwen2.5-VL has massive code corpora in training
+   - Has seen millions of Python function call examples
+
+2. **Patterns are predictable**
+   - Tool calling follows consistent structure
+   - VLM learns: "To use tool X with argument Y, write `X(Y=value)`"
+
+3. **Self-correction via error messages**
+   ```python
+   # Step 1 - VLM generates buggy code:
+   result = crop_pierres_detail_panel(image_path)  # NameError!
+
+   # Step 2 - CodeAgent shows error to VLM:
+   # NameError: name 'image_path' is not defined
+
+   # Step 3 - VLM sees error, fixes it:
+   image_path = "/path/to/screenshot.png"
+   result = crop_pierres_detail_panel(image_path)
+   ```
+
+This self-correction loop makes CodeAgent **robust even when VLMs make mistakes**.
+
+### Trade-off: CodeAgent vs ToolCallingAgent
+
+| Aspect | ToolCallingAgent (JSON) | CodeAgent (Python) |
+|--------|------------------------|-------------------|
+| VLM requirement | Any function-calling model | Code-trained VLM |
+| Model compatibility | ✅ Wider support | ⚠️  Needs code training |
+| Composability | ❌ Limited | ✅ Full (chain tools in code) |
+| Error messages | JSON parsing errors | Python stack traces |
+| Self-correction | Limited | Automatic |
+
+**For this course**: Qwen2.5-VL-7B-Instruct is explicitly trained on code, so CodeAgent works excellently.
 
 ---
 
@@ -321,7 +620,7 @@ class CropPierresPanelTool(Tool):
         }
     }
 
-    output_type = "dict"
+    output_type = "object"
 
     def forward(self, image_path: str):
         """Execute the extraction tool."""
@@ -366,7 +665,7 @@ class CropPierresPanelTool(Tool):
     name = "crop_pierres_detail_panel"
     description = "..."
     inputs = {...}
-    output_type = "dict"
+    output_type = "object"
 
     def forward(self, image_path: str):
         ...
@@ -429,7 +728,7 @@ print("Agent initialized!")
 
 **Parameters explained**:
 - `tools`: List of Tool instances
-- `model`: Model backend (InferenceClientModel, LiteLLMModel, etc.)
+- `model`: Model backend (InferenceClientModel, OpenAIServerModel, etc.)
 - `add_base_tools`: If `True`, adds web search, Python REPL, etc. (we don't need these)
 - `max_steps`: Max reasoning iterations (prevents infinite loops)
 - `verbosity`: 0=silent, 1=minimal, 2=detailed (shows VLM reasoning)
@@ -598,7 +897,7 @@ class GetScreenTypeTool(Tool):
         }
     }
 
-    output_type = "dict"
+    output_type = "object"
 
     def forward(self, image_path: str):
         """Mock implementation - always returns pierre_shop for now."""
@@ -632,7 +931,7 @@ class MyTool(Tool):
     name = "unique_name"          # Required
     description = "Clear desc"    # Required (helps VLM)
     inputs = {...}                # Required (JSON schema)
-    output_type = "dict"          # Required
+    output_type = "object"          # Required
 
     def forward(self, **kwargs):  # Required
         # Implementation here
@@ -723,7 +1022,31 @@ description = "Does stuff with images"  # Too vague!
 description = "Extract item details from Pierre's General Store detail panel in a Stardew Valley screenshot"
 ```
 
-### Pitfall 4: Incorrect Input Schema
+### Pitfall 4: Invalid output_type
+
+**Wrong**:
+```python
+output_type = "dict"  # NOT a valid Smolagents type!
+```
+
+**Valid `output_type` values** (from Smolagents v1.24.0):
+- `"string"` - For text/string data
+- `"integer"` - For whole numbers
+- `"number"` - For floats
+- `"boolean"` - For true/false
+- `"object"` - For dictionaries/JSON objects ← **Use this for dict returns!**
+- `"array"` - For lists
+- `"image"` - For PIL.Image
+- `"audio"` - For audio files
+- `"any"` - For any type
+- `"null"` - For None
+
+**Fix**:
+```python
+output_type = "object"  # Correct for dictionary returns
+```
+
+### Pitfall 5: Incorrect Input Schema
 
 **Wrong types**:
 ```python
@@ -750,27 +1073,43 @@ inputs = {
 Module 1: Definition (JSON) + Implementation (function) + Registry (dict)
 Module 2: One Tool class contains everything
 
-### 2. CodeAgent Automates Dispatch
+**Bonus**: Metadata auto-generates the system prompt!
 
-Module 1: You parse JSON, validate, look up, call
-Module 2: Agent does all of this automatically
+### 2. Smolagents Handles the Full Orchestration Loop
 
-### 3. VLM Writes Python Code (Not JSON)
+Module 1: You only wrote dispatch (~10 lines)
+Module 2: Smolagents handles prompt construction, VLM calls, response parsing, dispatch, multi-step loops (~60-110 lines → 2 lines)
 
-This enables:
-- Type checking (Python runtime)
-- Composability (chain tools in code)
-- Self-correction (VLM can fix syntax errors)
+### 3. System Prompts are Auto-Generated
 
-### 4. Same Pattern, Higher Abstraction
+Tool metadata → Function signatures → System prompt → VLM sees documentation
 
-The underlying mechanism hasn't changed:
-1. VLM gets tool definitions
-2. VLM decides which tool to use
-3. Tool is called with arguments
-4. Result is returned
+**Your job**: Write clear `name`, `description`, `inputs` metadata
+**Smolagents' job**: Convert to prompt format
 
-Smolagents just automates steps 2-4.
+### 4. Messages are Separate (System vs User)
+
+Not concatenated! Chat message array:
+```python
+[
+    {"role": "system", "content": "Tool definitions..."},
+    {"role": "user", "content": "Your task..."}
+]
+```
+
+### 5. CodeAgent Requires Code-Capable VLMs
+
+Works great with: Qwen2.5-VL, GPT-4o, Claude Sonnet
+Struggles with: Small models (<3B), non-code-trained models
+
+But the Python code it generates is **simple** (just function calls).
+
+### 6. forward() Methods Should Be Thin Wrappers
+
+Keep it simple: just call your implementation
+Add logic for: error handling, validation, logging, caching
+
+Don't put core business logic in `forward()`—keep it in your actual implementation.
 
 ---
 
@@ -788,7 +1127,7 @@ Smolagents just automates steps 2-4.
 
 **Module 3** fixes these:
 - Use vLLM for faster local inference
-- Use LiteLLMModel for OpenAI-compatible endpoints
+- Use OpenAIServerModel for OpenAI-compatible endpoints
 - Same agent code, just swap model backend
 
 **Module 4** adds production features:

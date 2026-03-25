@@ -5,8 +5,10 @@ Quick reference for common Smolagents patterns.
 ## Installation
 
 ```bash
-uv add 'smolagents[toolkit,litellm]'
+uv add 'smolagents[toolkit]'
 ```
+
+**Note**: Previous versions used `smolagents[litellm]`, but we've migrated to `OpenAIServerModel` (built-in) due to a March 2026 supply chain attack on LiteLLM.
 
 ## Basic Tool
 
@@ -26,9 +28,9 @@ class MyTool(Tool):
 ## CodeAgent (Recommended)
 
 ```python
-from smolagents import CodeAgent, LiteLLMModel
+from smolagents import CodeAgent, OpenAIServerModel
 
-model = LiteLLMModel(
+model = OpenAIServerModel(
     model_id="Qwen2.5-VL-7B-Instruct",
     base_url="http://localhost:8001/v1",
     api_key="EMPTY"
@@ -46,7 +48,7 @@ from PIL import Image
 class VisionTool(Tool):
     name = "analyze_image"
     inputs = {"image_path": {"type": "string"}}
-    output_type = "dict"
+    output_type = "object"
 
     def forward(self, image_path: str):
         image = Image.open(image_path)

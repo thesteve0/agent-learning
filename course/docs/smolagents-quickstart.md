@@ -14,12 +14,11 @@ uv add 'smolagents[toolkit]'
 # With transformers backend
 uv add 'smolagents[transformers]'
 
-# With LiteLLM backend (vLLM, OpenAI, Anthropic)
-uv add 'smolagents[litellm]'
-
 # Recommended for Stardew Vision
-uv add 'smolagents[toolkit,litellm]'
+uv add 'smolagents[toolkit]'
 ```
+
+**Security Note**: Previous versions of this guide recommended installing `smolagents[litellm]`. Due to a March 2026 supply chain attack on the LiteLLM package, we now use `OpenAIServerModel` (built into smolagents) instead, which provides the same functionality without the compromised dependency.
 
 ## Core Classes
 
@@ -37,7 +36,7 @@ class MyTool(Tool):
         "arg1": {"type": "string", "description": "First argument"},
         "arg2": {"type": "integer", "description": "Second argument"}
     }
-    output_type = "dict"  # or "string", "image", etc.
+    output_type = "object"  # or "string", "image", etc.
 
     def forward(self, arg1: str, arg2: int):
         """Execute the tool."""
@@ -116,28 +115,28 @@ model = InferenceClientModel(
 - Slower than vLLM
 - Not production-ready
 
-### LiteLLMModel (vLLM, OpenAI, Anthropic)
+### OpenAIServerModel (vLLM, OpenAI, Anthropic)
 
 Universal backend for any OpenAI-compatible API.
 
 ```python
-from smolagents import LiteLLMModel
+from smolagents import OpenAIServerModel
 
 # For vLLM
-model = LiteLLMModel(
+model = OpenAIServerModel(
     model_id="Qwen2.5-VL-7B-Instruct",
     base_url="http://localhost:8001/v1",
     api_key="EMPTY"
 )
 
 # For OpenAI API
-model = LiteLLMModel(
+model = OpenAIServerModel(
     model_id="gpt-4o",
     api_key="sk-..."
 )
 
 # For Anthropic API
-model = LiteLLMModel(
+model = OpenAIServerModel(
     model_id="claude-sonnet-4",
     api_key="sk-ant-..."
 )
@@ -360,20 +359,20 @@ print(agent.logs[-1]["code"])  # Last generated code
 ### Pattern 1: VLM with Vision Tool
 
 ```python
-from smolagents import CodeAgent, LiteLLMModel, Tool
+from smolagents import CodeAgent, OpenAIServerModel, Tool
 from PIL import Image
 
 class VisionTool(Tool):
     name = "analyze_screenshot"
     description = "Analyze screenshot and extract data"
     inputs = {"image_path": {"type": "string"}}
-    output_type = "dict"
+    output_type = "object"
 
     def forward(self, image_path: str):
         # Your vision logic
         return {"detected": "data"}
 
-model = LiteLLMModel(
+model = OpenAIServerModel(
     model_id="Qwen2.5-VL-7B-Instruct",
     base_url="http://localhost:8001/v1",
     api_key="EMPTY"
@@ -390,7 +389,7 @@ class WeatherTool(Tool):
     name = "get_weather"
     description = "Get current weather for a location"
     inputs = {"location": {"type": "string"}}
-    output_type = "dict"
+    output_type = "object"
 
     def forward(self, location: str):
         import requests
@@ -524,7 +523,7 @@ export LITELLM_LOG="DEBUG"
 **Quick Start Template**:
 
 ```python
-from smolagents import CodeAgent, LiteLLMModel, Tool
+from smolagents import CodeAgent, OpenAIServerModel, Tool
 
 # 1. Define tool
 class MyTool(Tool):
@@ -537,7 +536,7 @@ class MyTool(Tool):
         return f"Processed: {arg}"
 
 # 2. Initialize model
-model = LiteLLMModel(
+model = OpenAIServerModel(
     model_id="Qwen2.5-VL-7B-Instruct",
     base_url="http://localhost:8001/v1",
     api_key="EMPTY"

@@ -157,7 +157,7 @@ import json
 import logging
 from typing import Optional, Dict, Any
 from pathlib import Path
-from smolagents import CodeAgent, Tool, LiteLLMModel
+from smolagents import CodeAgent, Tool, OpenAIServerModel
 import mlflow
 import time
 
@@ -193,7 +193,7 @@ class PierresPanelTool(Tool):
             "description": "Path to the screenshot file"
         }
     }
-    output_type = "dict"
+    output_type = "object"
 
     def forward(self, image_path: str):
         """Execute the extraction tool."""
@@ -257,7 +257,7 @@ class VLMOrchestrator:
         # Initialize model
         if use_vllm:
             logger.info(f"Using vLLM endpoint: {vllm_endpoint}")
-            self.model = LiteLLMModel(
+            self.model = OpenAIServerModel(
                 model_id=model_id,
                 base_url=vllm_endpoint,
                 api_key="EMPTY"
@@ -286,7 +286,7 @@ class VLMOrchestrator:
 
 **Functions (Module 3)**:
 ```python
-model = LiteLLMModel(...)
+model = OpenAIServerModel(...)
 tools = [MyTool()]
 agent = CodeAgent(...)
 
@@ -314,7 +314,7 @@ result = orchestrator.analyze_screenshot(...)  # Encapsulated state
 **Flexible model backend**:
 ```python
 if use_vllm:
-    self.model = LiteLLMModel(...)  # Production
+    self.model = OpenAIServerModel(...)  # Production
 else:
     self.model = InferenceClientModel(...)  # Fallback
 ```
@@ -508,7 +508,7 @@ from stardew_vision.models.vlm_wrapper import VLMOrchestrator
 @pytest.fixture
 def orchestrator():
     """Create VLMOrchestrator with mocked components."""
-    with patch('stardew_vision.models.vlm_wrapper.LiteLLMModel'):
+    with patch('stardew_vision.models.vlm_wrapper.OpenAIServerModel'):
         orch = VLMOrchestrator(enable_mlflow=False)
         return orch
 
@@ -564,14 +564,14 @@ def test_analyze_screenshot_vlm_failure(orchestrator, tmp_path):
 @pytest.fixture
 def orchestrator():
     """Create VLMOrchestrator with mocked components."""
-    with patch('stardew_vision.models.vlm_wrapper.LiteLLMModel'):
+    with patch('stardew_vision.models.vlm_wrapper.OpenAIServerModel'):
         orch = VLMOrchestrator(enable_mlflow=False)
         return orch
 ```
 
 **What's happening?**
 - `@pytest.fixture`: Runs before each test
-- `patch(...)`: Mock LiteLLMModel (don't create real model)
+- `patch(...)`: Mock OpenAIServerModel (don't create real model)
 - `enable_mlflow=False`: Don't log to MLFlow in tests
 - Returns orchestrator for test to use
 
@@ -964,7 +964,7 @@ def test_orchestrator():
 ```python
 def test_orchestrator():
     # Mock the model
-    with patch('...LiteLLMModel'):
+    with patch('...OpenAIServerModel'):
         orch = VLMOrchestrator(enable_mlflow=False)
         orch.agent.run = Mock(return_value={...})
         result = orch.analyze_screenshot(...)

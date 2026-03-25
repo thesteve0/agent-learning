@@ -51,7 +51,7 @@ def example_1_orchestrator_class():
 
     # Show the class structure
     code = '''
-from smolagents import CodeAgent, Tool, LiteLLMModel
+from smolagents import CodeAgent, Tool, OpenAIServerModel
 import mlflow
 import logging
 from typing import Dict, Any
@@ -64,7 +64,7 @@ class PierresPanelTool(Tool):
     name = "crop_pierres_detail_panel"
     description = "Extract item details from Pierre's General Store detail panel"
     inputs = {"image_path": {"type": "string", "description": "Path to screenshot"}}
-    output_type = "dict"
+    output_type = "object"
 
     def forward(self, image_path: str):
         from stardew_vision.tools import crop_pierres_detail_panel
@@ -94,7 +94,7 @@ class VLMOrchestrator:
         # Initialize model
         if use_vllm:
             logger.info(f"Using vLLM endpoint: {vllm_endpoint}")
-            self.model = LiteLLMModel(
+            self.model = OpenAIServerModel(
                 model_id=model_id,
                 base_url=vllm_endpoint,
                 api_key="EMPTY"
@@ -372,7 +372,7 @@ from stardew_vision.models.vlm_wrapper import VLMOrchestrator
 @pytest.fixture
 def orchestrator():
     """Create VLMOrchestrator with mocked components."""
-    with patch('stardew_vision.models.vlm_wrapper.LiteLLMModel'):
+    with patch('stardew_vision.models.vlm_wrapper.OpenAIServerModel'):
         orch = VLMOrchestrator(enable_mlflow=False)
         return orch
 

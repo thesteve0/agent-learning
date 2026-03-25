@@ -17,10 +17,10 @@ The `max_steps` parameter controls how many reasoning iterations the agent can p
 Test the same task with different `max_steps` values:
 
 ```python
-from smolagents import CodeAgent, LiteLLMModel
+from smolagents import CodeAgent, OpenAIServerModel
 from stardew_vision.models.vlm_wrapper import PierresPanelTool
 
-model = LiteLLMModel(
+model = OpenAIServerModel(
     model_id="Qwen2.5-VL-7B-Instruct",
     base_url="http://localhost:8001/v1",
     api_key="EMPTY"
@@ -225,7 +225,7 @@ print([tool.name for tool in agent_without_base.tools])
 
 ## Part 4: Model Backend Comparison
 
-Compare InferenceClientModel vs LiteLLMModel performance.
+Compare InferenceClientModel vs OpenAIServerModel performance.
 
 ### Experiment
 
@@ -233,7 +233,7 @@ Compare InferenceClientModel vs LiteLLMModel performance.
 
 ```python
 import time
-from smolagents import InferenceClientModel, LiteLLMModel
+from smolagents import InferenceClientModel, OpenAIServerModel
 
 # Transformers backend (local)
 print("Testing InferenceClientModel (transformers)...")
@@ -245,8 +245,8 @@ result1 = agent_transformers.run("Extract from screenshot.png")
 latency_transformers = time.time() - start
 
 # vLLM backend (served)
-print("\nTesting LiteLLMModel (vLLM)...")
-model_vllm = LiteLLMModel(
+print("\nTesting OpenAIServerModel (vLLM)...")
+model_vllm = OpenAIServerModel(
     model_id="Qwen2.5-VL-7B-Instruct",
     base_url="http://localhost:8001/v1",
     api_key="EMPTY"
@@ -260,7 +260,7 @@ latency_vllm = time.time() - start
 # Compare
 print(f"\nLatency comparison:")
 print(f"  InferenceClientModel: {latency_transformers:.2f}s")
-print(f"  LiteLLMModel (vLLM):  {latency_vllm:.2f}s")
+print(f"  OpenAIServerModel (vLLM):  {latency_vllm:.2f}s")
 print(f"  Speedup: {latency_transformers / latency_vllm:.2f}x")
 ```
 
@@ -271,7 +271,7 @@ print(f"  Speedup: {latency_transformers / latency_vllm:.2f}x")
    <details>
    <summary>Answer</summary>
 
-   LiteLLMModel with vLLM is typically 2-5x faster due to:
+   OpenAIServerModel with vLLM is typically 2-5x faster due to:
    - Continuous batching
    - Optimized GPU kernels
    - KV cache management
@@ -289,7 +289,7 @@ print(f"  Speedup: {latency_transformers / latency_vllm:.2f}x")
 
    </details>
 
-3. **When to use LiteLLMModel?**
+3. **When to use OpenAIServerModel?**
 
    <details>
    <summary>Answer</summary>
@@ -444,7 +444,7 @@ Create the "optimal" CodeAgent configuration for Stardew Vision.
 ```python
 agent = CodeAgent(
     tools=[PierresPanelTool()],
-    model=LiteLLMModel(...),  # Fill in parameters
+    model=OpenAIServerModel(...),  # Fill in parameters
     max_steps=?,
     verbosity=?,
     add_base_tools=?,
@@ -461,7 +461,7 @@ agent = CodeAgent(
 ```python
 agent = CodeAgent(
     tools=[PierresPanelTool()],
-    model=LiteLLMModel(
+    model=OpenAIServerModel(
         model_id="Qwen2.5-VL-7B-Instruct",
         base_url="http://localhost:8001/v1",
         api_key="EMPTY"
@@ -495,11 +495,11 @@ Test your optimized agent:
 
 ```bash
 python -c "
-from smolagents import CodeAgent, LiteLLMModel
+from smolagents import CodeAgent, OpenAIServerModel
 from stardew_vision.models.vlm_wrapper import PierresPanelTool
 import time
 
-model = LiteLLMModel(
+model = OpenAIServerModel(
     model_id='Qwen2.5-VL-7B-Instruct',
     base_url='http://localhost:8001/v1',
     api_key='EMPTY'

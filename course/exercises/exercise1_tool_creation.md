@@ -182,7 +182,7 @@ class ScreenTypeTool(Tool):
         }
     }
 
-    output_type = "dict"
+    output_type = "object"
 
     def forward(self, image_path: str):
         """Execute the screen type classification."""

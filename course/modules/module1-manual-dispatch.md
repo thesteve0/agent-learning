@@ -33,6 +33,39 @@ Think of it like learning manual transmission before automatic — you'll be a b
 
 ---
 
+## What This Module Covers (and Doesn't)
+
+**Important**: This module focuses ONLY on the **dispatch mechanism** — how to call a tool based on a VLM's response.
+
+### What We Cover
+- ✅ Tool definitions (JSON schema)
+- ✅ Tool registry (name → function mapping)
+- ✅ Manual dispatch (parsing VLM response and calling functions)
+
+### What We DON'T Cover (Yet)
+- ❌ **Prompt construction** - Building the system prompt with tool definitions
+- ❌ **VLM invocation** - Actually calling the VLM API (OpenAI, vLLM, etc.)
+- ❌ **Response parsing** - Extracting tool calls from VLM responses
+- ❌ **Multi-step loops** - Chaining multiple tool calls together
+- ❌ **Error recovery** - Retry logic when VLM or tools fail
+
+**In a real system**, you need ~50-100 lines of "client orchestration code" that:
+1. Constructs a prompt with tool definitions and user message
+2. Sends it to the VLM API
+3. Parses the VLM's response for tool calls
+4. Dispatches tools (this module!)
+5. Sends results back to VLM if more steps needed
+6. Loops until task is complete
+
+**Module 1 teaches step 4**. **Module 2 (Smolagents) handles steps 1-6 automatically**.
+
+Why learn dispatch in isolation? Because:
+- You'll understand what `agent.run()` does under the hood
+- You can debug framework issues when they arise
+- You'll appreciate how much boilerplate Smolagents eliminates
+
+---
+
 ## The Problem We're Solving
 
 We have a screenshot of Pierre's shop in Stardew Valley. We want to extract item details (name, price, description). How do we bridge this gap?
@@ -589,9 +622,11 @@ In production, replace with proper logging (`logging.info()`, MLFlow, etc.).
 
 ## What Frameworks Automate
 
-After doing this manually, you'll appreciate what Smolagents (Module 2) does for you:
+After doing this manually, you'll appreciate what Smolagents (Module 2) does for you.
 
-**You wrote**:
+### In Module 1, You Wrote:
+
+**Just the dispatch** (~10 lines):
 ```python
 tool_call = vlm_response["tool_call"]
 tool_name = tool_call["function"]["name"]
@@ -603,14 +638,67 @@ if tool_name not in TOOL_REGISTRY:
 result = TOOL_REGISTRY[tool_name](**arguments)
 ```
 
-**Smolagents does**:
+**But in a real system, you'd also need** (~50-100 lines):
+```python
+# 1. Construct system prompt with tool definitions
+system_prompt = f"""You are an assistant with access to these tools:
+{json.dumps(TOOL_DEFINITIONS, indent=2)}
+
+Call tools by returning JSON in this format: ...
+"""
+
+# 2. Build chat messages array
+messages = [
+    {"role": "system", "content": system_prompt},
+    {"role": "user", "content": "Extract from screenshot.png"}
+]
+
+# 3. Call VLM API
+response = openai.chat.completions.create(
+    model="gpt-4o",
+    messages=messages,
+    tools=TOOL_DEFINITIONS
+)
+
+# 4. Parse response for tool calls
+tool_calls = response.choices[0].message.tool_calls
+if not tool_calls:
+    return response.choices[0].message.content
+
+# 5. Dispatch each tool (your Module 1 code)
+results = []
+for tool_call in tool_calls:
+    tool_name = tool_call.function.name
+    arguments = json.loads(tool_call.function.arguments)
+    result = TOOL_REGISTRY[tool_name](**arguments)
+    results.append(result)
+
+# 6. If task incomplete, add results to messages and loop
+if need_more_steps:
+    messages.append({"role": "assistant", "tool_calls": tool_calls})
+    messages.append({"role": "tool", "content": json.dumps(results)})
+    # Go back to step 3...
+```
+
+### With Smolagents:
+
+**All of the above** becomes:
 ```python
 agent = CodeAgent(tools=[MyTool()], model=model)
 result = agent.run("Extract from screenshot")
-# All parsing, validation, dispatch happens automatically
 ```
 
-But now you **understand** what's happening under the hood!
+Smolagents handles:
+- ✅ System prompt generation (from Tool class metadata)
+- ✅ Chat message construction (system + user)
+- ✅ VLM API calls (with error handling, retries)
+- ✅ Response parsing (JSON or Python code)
+- ✅ Tool dispatch (with validation)
+- ✅ Multi-step loops (until task complete)
+
+**The win**: You go from ~60-110 lines to **2 lines**.
+
+But now you **understand** what's happening in those 2 lines!
 
 ---
 

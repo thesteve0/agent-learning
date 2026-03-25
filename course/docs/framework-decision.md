@@ -47,7 +47,7 @@ from PIL import Image
 
 class VisionTool(Tool):
     inputs = {"image": {"type": "image"}}  # Native image support
-    output_type = "dict"
+    output_type = "object"
 
     def forward(self, image: Image.Image):
         # Direct PIL Image handling

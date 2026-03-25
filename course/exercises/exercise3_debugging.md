@@ -15,10 +15,10 @@
 Agent returns text description instead of calling the extraction tool.
 
 ```python
-from smolagents import CodeAgent, LiteLLMModel
+from smolagents import CodeAgent, OpenAIServerModel
 from stardew_vision.models.vlm_wrapper import PierresPanelTool
 
-model = LiteLLMModel(
+model = OpenAIServerModel(
     model_id="Qwen2.5-VL-7B-Instruct",
     base_url="http://localhost:8001/v1",
     api_key="EMPTY"
@@ -310,7 +310,7 @@ def validate_tool_call(tool_name: str, available_tools: list) -> bool:
 Agent hangs or times out when trying to connect to vLLM.
 
 ```python
-model = LiteLLMModel(
+model = OpenAIServerModel(
     model_id="Qwen2.5-VL-7B-Instruct",
     base_url="http://localhost:8001/v1",
     api_key="EMPTY"
@@ -650,7 +650,7 @@ Optimize for <3s latency.
 **Optimizations**:
 ```python
 # 1. Use vLLM (not transformers)
-model = LiteLLMModel(
+model = OpenAIServerModel(
     model_id="Qwen2.5-VL-7B-Instruct",
     base_url="http://localhost:8001/v1",
     api_key="EMPTY"

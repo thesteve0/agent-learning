@@ -87,20 +87,20 @@ def demo_2_smolagents():
     # Show Smolagents code
     print("Smolagents implementation:")
     code = '''
-from smolagents import CodeAgent, LiteLLMModel, Tool
+from smolagents import CodeAgent, OpenAIServerModel, Tool
 
 class PierresPanelTool(Tool):
     name = "crop_pierres_detail_panel"
     description = "Extract item details from Pierre's General Store"
     inputs = {"image_path": {"type": "string"}}
-    output_type = "dict"
+    output_type = "object"
 
     def forward(self, image_path: str):
         from stardew_vision.tools import crop_pierres_detail_panel
         return crop_pierres_detail_panel(image_path)
 
 # Connect to vLLM endpoint
-model = LiteLLMModel(
+model = OpenAIServerModel(
     model_id="Qwen2.5-VL-7B-Instruct",
     base_url="http://localhost:8001/v1",
     api_key="EMPTY"

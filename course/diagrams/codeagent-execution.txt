@@ -44,7 +44,7 @@ We use CodeAgent because:
         inputs = {
             "image_path": {"type": "string", "description": "..."}
         }
-        output_type = "dict"
+        output_type = "object"
 
         def forward(self, image_path: str):
             from stardew_vision.tools import crop_pierres_detail_panel
@@ -59,9 +59,9 @@ We use CodeAgent because:
 │                    STEP 2: INITIALIZE CODEAGENT                           │
 └──────────────────────────────────────────────────────────────────────────┘
 
-    from smolagents import CodeAgent, LiteLLMModel
+    from smolagents import CodeAgent, OpenAIServerModel
 
-    model = LiteLLMModel(
+    model = OpenAIServerModel(
         model_id="Qwen2.5-VL-7B-Instruct",
         base_url="http://localhost:8001/v1"
     )

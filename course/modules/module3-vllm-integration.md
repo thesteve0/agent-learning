@@ -12,10 +12,12 @@ By the end of this module, you will:
 
 - ✅ Understand what vLLM is and why it's used
 - ✅ Start a vLLM server with tool calling enabled
-- ✅ Use LiteLLMModel backend to connect Smolagents to vLLM
+- ✅ Use OpenAIServerModel backend to connect Smolagents to vLLM
 - ✅ Switch between InferenceClient and vLLM with minimal code changes
 - ✅ Debug common vLLM connection issues
 - ✅ Recognize the OpenAI-compatible API pattern
+
+**Security Note**: This module previously used `LiteLLMModel`. Due to a March 2026 supply chain attack on the LiteLLM package, we've migrated to `OpenAIServerModel` which provides identical functionality without the compromised dependency. The examples below reflect this change.
 
 ---
 
@@ -76,7 +78,7 @@ Your Application                    vLLM Server
 ┌─────────────────┐                ┌─────────────────────────┐
 │                 │  HTTP Request  │                         │
 │  Smolagents     │───────────────>│  OpenAI-Compatible API  │
-│  LiteLLMModel   │                │  (port 8001)            │
+│  OpenAIServerModel   │                │  (port 8001)            │
 │                 │                │                         │
 │  - Tools: [...]  │                │  ┌───────────────────┐  │
 │  - Prompt       │                │  │ Request Handler   │  │
@@ -108,7 +110,7 @@ Your Web App                       KServe Endpoint
 ┌─────────────────┐                ┌─────────────────────────┐
 │                 │  HTTPS Request │                         │
 │  Smolagents     │───────────────>│  vLLM via KServe        │
-│  LiteLLMModel   │                │  (https://model.apps...) │
+│  OpenAIServerModel   │                │  (https://model.apps...) │
 │                 │                │                         │
 │  base_url:      │                │  Same vLLM engine       │
 │  https://...    │                │  Same API format        │
@@ -203,21 +205,21 @@ Now let's walk through `examples/module3_smolagents_vllm.py` and see the differe
 ### Part 1: Imports (Lines 7-9)
 
 ```python
-from smolagents import CodeAgent, Tool, LiteLLMModel
+from smolagents import CodeAgent, Tool, OpenAIServerModel
 import json
 ```
 
 **Changed from Module 2**:
 ```diff
 - from smolagents import CodeAgent, Tool, InferenceClientModel
-+ from smolagents import CodeAgent, Tool, LiteLLMModel
++ from smolagents import CodeAgent, Tool, OpenAIServerModel
 ```
 
-**Why LiteLLMModel?**
+**Why OpenAIServerModel?**
 - `InferenceClientModel` - HuggingFace-specific (transformers or Inference API)
-- `LiteLLMModel` - Universal adapter for OpenAI-compatible endpoints
+- `OpenAIServerModel` - Universal adapter for OpenAI-compatible endpoints
 
-**LiteLLMModel supports**:
+**OpenAIServerModel supports**:
 - vLLM (local)
 - TGI (Text Generation Inference)
 - OpenAI API
@@ -238,7 +240,7 @@ class CropPierresPanelTool(Tool):
             "description": "Path to the screenshot file"
         }
     }
-    output_type = "dict"
+    output_type = "object"
 
     def forward(self, image_path: str):
         from stardew_vision.tools import crop_pierres_detail_panel
@@ -252,11 +254,11 @@ class CropPierresPanelTool(Tool):
 
 This is the power of abstraction - tools don't care about the model backend.
 
-### Part 3: Configure LiteLLMModel (Lines 39-49)
+### Part 3: Configure OpenAIServerModel (Lines 39-49)
 
 ```python
 print("Connecting to vLLM endpoint at http://localhost:8001...")
-model = LiteLLMModel(
+model = OpenAIServerModel(
     model_id="Qwen2.5-VL-7B-Instruct",      # Model name (for vLLM routing)
     base_url="http://localhost:8001/v1",    # vLLM OpenAI-compatible endpoint
     api_key="EMPTY"                         # vLLM doesn't require auth locally
@@ -271,8 +273,8 @@ model = InferenceClientModel(
     model_id="Qwen/Qwen2.5-VL-7B-Instruct"
 )
 
-# Module 3 (LiteLLMModel)
-model = LiteLLMModel(
+# Module 3 (OpenAIServerModel)
+model = OpenAIServerModel(
     model_id="Qwen2.5-VL-7B-Instruct",
     base_url="http://localhost:8001/v1",
     api_key="EMPTY"
@@ -296,9 +298,9 @@ model = LiteLLMModel(
 - OpenAI: Use actual API key (`sk-...`)
 - OpenShift AI: Use service token
 
-**Under the hood**: LiteLLMModel translates Smolagents calls to OpenAI API format:
+**Under the hood**: OpenAIServerModel translates Smolagents calls to OpenAI API format:
 ```
-Smolagents           LiteLLMModel               vLLM
+Smolagents           OpenAIServerModel               vLLM
 ┌─────────┐          ┌───────────┐          ┌─────────┐
 │ agent.  │  calls   │ Translates│  HTTP    │ OpenAI  │
 │ run()   │────────> │ to OpenAI │────────> │ API     │
@@ -314,7 +316,7 @@ tools = [CropPierresPanelTool()]
 print("Initializing CodeAgent with vLLM backend...")
 agent = CodeAgent(
     tools=tools,
-    model=model,              # LiteLLMModel instead of InferenceClientModel
+    model=model,              # OpenAIServerModel instead of InferenceClientModel
     add_base_tools=False,
     max_steps=3,
     verbosity=2
@@ -324,7 +326,7 @@ print("Agent initialized!")
 
 **Exactly the same as Module 2!**
 
-Only difference: `model` is `LiteLLMModel` instead of `InferenceClientModel`.
+Only difference: `model` is `OpenAIServerModel` instead of `InferenceClientModel`.
 
 **This is the abstraction win** - agent code doesn't change when you swap backends.
 
@@ -410,7 +412,7 @@ GET  /v1/models               # List models
 
 ### Example Request (Chat Completions)
 
-**What Smolagents sends** (via LiteLLMModel):
+**What Smolagents sends** (via OpenAIServerModel):
 
 ```http
 POST http://localhost:8001/v1/chat/completions
@@ -469,7 +471,7 @@ Content-Type: application/json
 }
 ```
 
-**LiteLLMModel parses this** and returns it to Smolagents in the expected format.
+**OpenAIServerModel parses this** and returns it to Smolagents in the expected format.
 
 **Why this matters**:
 - Same API for local vLLM and OpenAI GPT-4
@@ -564,14 +566,14 @@ Agent Result:
 **Edit the example** or create a test script:
 ```python
 # Local vLLM
-model = LiteLLMModel(
+model = OpenAIServerModel(
     model_id="Qwen2.5-VL-7B-Instruct",
     base_url="http://localhost:8001/v1",
     api_key="EMPTY"
 )
 
 # "Production" (still local, but shows pattern)
-# model = LiteLLMModel(
+# model = OpenAIServerModel(
 #     model_id="Qwen2.5-VL-7B-Instruct",
 #     base_url="https://model-stardew-vision.apps.cluster.com/v1",
 #     api_key=os.getenv("OPENSHIFT_TOKEN")
@@ -588,7 +590,7 @@ agent = CodeAgent(tools=[...], model=model)
 
 **Test 1: Wrong port**
 ```python
-model = LiteLLMModel(
+model = OpenAIServerModel(
     model_id="Qwen2.5-VL-7B-Instruct",
     base_url="http://localhost:9999/v1",  # Wrong port!
     api_key="EMPTY"
@@ -752,7 +754,7 @@ elif os.getenv("ENV") == "production":
     base_url = os.getenv("VLLM_ENDPOINT")
     api_key = os.getenv("VLLM_API_KEY")
 
-model = LiteLLMModel(
+model = OpenAIServerModel(
     model_id="Qwen2.5-VL-7B-Instruct",
     base_url=base_url,
     api_key=api_key
@@ -781,7 +783,7 @@ def check_vllm_health(base_url: str, timeout: int = 5) -> bool:
 if not check_vllm_health("http://localhost:8001/v1"):
     raise ConnectionError("vLLM server not available")
 
-model = LiteLLMModel(...)
+model = OpenAIServerModel(...)
 ```
 
 ### Pattern 3: Graceful Degradation
@@ -791,7 +793,7 @@ model = LiteLLMModel(...)
 ```python
 try:
     # Try vLLM first (faster)
-    model = LiteLLMModel(
+    model = OpenAIServerModel(
         model_id="Qwen2.5-VL-7B-Instruct",
         base_url="http://localhost:8001/v1",
         api_key="EMPTY"
@@ -824,7 +826,7 @@ Module 3 (vLLM): Good for production
 - Better memory efficiency
 - Concurrent request handling
 
-### 2. LiteLLMModel is Universal Adapter
+### 2. OpenAIServerModel is Universal Adapter
 
 Works with any OpenAI-compatible endpoint:
 - ✅ Local vLLM
@@ -863,8 +865,8 @@ Understanding OpenAI API format helps with:
 class MyTool(Tool):
     # Same code works with:
     # - InferenceClientModel (Module 2)
-    # - LiteLLMModel + vLLM (Module 3)
-    # - LiteLLMModel + OpenAI (future)
+    # - OpenAIServerModel + vLLM (Module 3)
+    # - OpenAIServerModel + OpenAI (future)
 ```
 
 **This abstraction is powerful** - write tools once, use anywhere.
@@ -875,7 +877,7 @@ class MyTool(Tool):
 
 | Aspect              | Module 2                    | Module 3                  |
 |---------------------|----------------------------|---------------------------|
-| Model Backend       | InferenceClientModel       | LiteLLMModel              |
+| Model Backend       | InferenceClientModel       | OpenAIServerModel              |
 | Server              | HuggingFace transformers   | vLLM                      |
 | Speed               | Slow (~5-10s)              | Fast (~1-2s)              |
 | Setup               | None (auto-download)       | Start vLLM server         |
@@ -894,7 +896,7 @@ You now understand:
 
 1. ✅ **What vLLM is** - Production inference server for LLMs/VLMs
 2. ✅ **Why use vLLM** - 2-4x faster, production-ready, local serving
-3. ✅ **LiteLLMModel** - Universal adapter for OpenAI-compatible endpoints
+3. ✅ **OpenAIServerModel** - Universal adapter for OpenAI-compatible endpoints
 4. ✅ **Code changes** - Only model initialization (5 lines)
 5. ✅ **OpenAI API** - Standard format used by vLLM
 6. ✅ **Deployment pattern** - Same code, different base_url
